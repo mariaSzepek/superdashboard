@@ -14,6 +14,7 @@ library(data.table)
 library(readr)
 
 
+
 # eigener code:
 coronaDT = read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
 setDT(coronaDT) # make sure that coronaD is a data table rather than a data frame
@@ -85,8 +86,18 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             
-            selectInput("countries","Select countries", unique(PlotDT$`Country/Region`), multiple = TRUE),
-            verbatimTextOutput("dfStr")
+            # select countries input: 
+            selectizeInput("selectcountries", "Select countries", unique(PlotDT$`Country/Region`),
+                           multiple = TRUE, options = list(
+                               'plugins' = list('remove_button'),
+                               'create' = TRUE,
+                               'persist' = FALSE,
+                               placeholder = 'Select countries'
+                               )
+            ),
+            
+            # dont know what it does 
+            textOutput("out")
             
             
             
