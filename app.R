@@ -27,50 +27,44 @@ PlotDT = melt(coronaDT, id.vars = 1:4,
               variable.name = "Date",
               value.name = "Dead")
 
+
+
 PlotDT$Date = PlotDT$Date %>%
     as.Date(format = "%m/%d/%y")
 
-## steps to a plottable table with death per capita "zusammen"
+## steps to a plottable table with death per capita "PlotPerCapita_100k"
 
-PlotDTClean = PlotDT[is.na(`Province/State`)]
-
+PlotDT_OnlyCountries = PlotDT[is.na(`Province/State`)]
 
 # total population data: 
 
-totPop <- read_csv("API_SP.POP.TOTL_DS2_en_excel2csv_v2_2917451.csv")
+totPopRaw <- read_csv("API_SP.POP.TOTL_DS2_en_excel2csv_v2_2917451.csv")
+setDT(totPopRaw)
 
-
-# totPop <- read_csv("SupergroupShinyCoronaApp/API_SP.POP.TOTL_DS2_en_excel2csv_v2_2917451.csv")
-
-#totPop <- read_csv("Mastermodule/TBS/Programming/R/Group project/API_SP.POP.TOTL_DS2_en_excel2csv_v2_2917451.csv")
-
-setDT(totPop)
-
-totPop1 = totPop[4:269,!2:64]
-# View(totPop1)
-
-# how to change column names?
-
+totPopClean = totPopRaw[4:269,!2:64]
 
 # calculate death per capita (100k inhabitants):
-
 # inner join:
-zusammen = merge(PlotDTClean, totPop1, by.x = 'Country/Region', by.y = 'Data Source', all = FALSE)
-zusammen
+PlotPerCapitaDT_100k = merge(PlotDT_OnlyCountries, totPopClean, by.x = 'Country/Region', by.y = 'Data Source', all = FALSE)
+
+# calculation:
+PlotPerCapitaDT_100k$deathPer100k <- (PlotPerCapitaDT_100k$Dead / PlotPerCapitaDT_100k$...65 )* 100000
+
+# rename column ...65:
+setnames(PlotPerCapitaDT_100k, "...65", "Population in 2020")
 
 
 
-zusammen$deathPer100k <- (zusammen$Dead / zusammen$...65 )* 100000
-zusammen
+# outsource plot function
 
-setnames(zusammen, "...65", "Population")
-
-zusammen
+plotCoronaDeaths = function( listOfCountries, dataInput) { # scale, minDate, maxDate, , columnName ?
     
-
-
-
-
+    ggplot( data = dataInput[`Country/Region` %in% (listOfCountries) & is.na(`Province/State`)],
+            aes (x = Date, y= Dead, group= `Country/Region`)) + 
+        geom_line() +   
+        geom_line(aes(colour = `Country/Region`))
+    
+}
 
 
 
@@ -87,7 +81,7 @@ ui <- fluidPage(
         sidebarPanel(
             
             # select countries input: 
-            selectizeInput("selectcountries", "Select countries", unique(PlotDT$`Country/Region`),
+            selectizeInput("countries", "Select countries", unique(PlotDT$`Country/Region`),
                            multiple = TRUE, options = list(
                                'plugins' = list('remove_button'),
                                'create' = TRUE,
@@ -105,8 +99,8 @@ ui <- fluidPage(
         
         # Show a plot of the generated distribution
         mainPanel(
-            plotOutput("normalXYGraph"),
-            plotOutput("somethingelse")
+            plotOutput("plot_absoluteDeaths"),
+            plotOutput("plot_deathsPer100k")
         )
     )
 )
@@ -114,31 +108,17 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
-    # output$normalXYGraph <- renderPlot({
-    #     ggplot(data = PlotDT[`Country/Region` == input$country & is.na(`Province/State`)], aes (x = Date, y= Dead) ) + geom_line() +   geom_line(aes(colour = `Country/Region`))
-    #     # generate bins based on input$bins from ui.R
-    #     
-    # })
-    
-    output$normalXYGraph <- renderPlot({
-        ggplot( data = PlotDT[`Country/Region` %in% (input$countries) & is.na(`Province/State`)],
-                aes (x = Date, y= Dead, group= `Country/Region`)) + 
-            geom_line() +   
-            geom_line(aes(colour = `Country/Region`))
-        
+    output$plot_absoluteDeaths <- renderPlot({
+
+        plotCoronaDeaths ( input$countries, PlotDT ) # input$scale? column nane?
+
     })
     
-    output$somethingelse <- renderPlot({
-        ggplot( data = PlotDT[`Country/Region` %in% (input$countries) & is.na(`Province/State`)],
-                aes (x = Date, y= Dead, group= `Country/Region`)) + 
-            geom_line() +   
-            geom_line(aes(colour = `Country/Region`))
-        
+    output$plot_deathsPer100k <- renderPlot({
+
+        plotCoronaDeaths ( input$countries, PlotPerCapitaDT_100k ) # input$scale?
+
     })
-    
-    
-    
-    
     
     
 }
