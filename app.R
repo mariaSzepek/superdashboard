@@ -20,6 +20,18 @@ coronaDT = read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/m
 setDT(coronaDT) # make sure that coronaD is a data table rather than a data frame
 Dates = colnames(coronaDT[,!1:4])
 
+# EU27
+EU27 = c("Austria", "Belgium", "Bulgaria", "Croatia", 
+         "Cyprus", "Czech Republic", "Denmark", 
+         "Estonia", "Finland", "France", "Germany", "Greece", 
+         "Hungary", "Ireland", "Italy", "Latvia", "Lithuania", 
+         "Luxembourg", "Malta", "Netherlands", "Poland", "Portugal", 
+         "Romania", "Slovakia", "Slovenia", "Spain", "Sweden")
+EU27DT = coronaDT[`Country/Region` %in% EU27][is.na(`Province/State`)]
+
+coronaDT = rbind(EU27DT,cbind(data.table(`Country/Region`='EU27'), t(colSums(EU27DT[,!1:4]))),fill=TRUE)
+
+
 # MELT DOES: TRANSFORM FROM WIDE INTO A LONG TABLE 
 
 PlotDT = melt(coronaDT, id.vars = 1:4,
@@ -31,6 +43,7 @@ PlotDT = melt(coronaDT, id.vars = 1:4,
 
 PlotDT$Date = PlotDT$Date %>%
     as.Date(format = "%m/%d/%y")
+
 
 ## steps to a plottable table with death per capita "PlotPerCapita_100k"
 
@@ -53,7 +66,7 @@ PlotPerCapitaDT_100k$deathPer100k <- (PlotPerCapitaDT_100k$Dead / PlotPerCapitaD
 # rename column ...65:
 setnames(PlotPerCapitaDT_100k, "...65", "Population in 2020")
 
-
+# [TO DO MARIA] coronaDT = rbind(EU27DT,cbind(data.table(`Country/Region`='EU27'), t(colSums(EU27DT[,!1:4]))),fill=TRUE)
 
 # outsource plot function
 
@@ -71,6 +84,15 @@ ui <- fluidPage(
     
     # Application title
     titlePanel("Old Faithful Geyser Data"),
+    
+    
+    # superhero theme & tabsets:
+    navbarPage("Superdashboard",
+               theme = shinythemes::shinytheme("superhero"),
+               tabPanel("Home"),
+               tabPanel("Home2"),
+               tabPanel("Home3")
+    ),
     
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
@@ -131,3 +153,4 @@ shinyApp(ui = ui, server = server)
 
 #Wiam testing 
 #Taha Testing 
+
