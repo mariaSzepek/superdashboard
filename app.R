@@ -66,15 +66,6 @@ plotCoronaDeaths = function( listOfCountries, dataInput) { # scale, minDate, max
     
 }
 
-scale = "logarithmic" # setting the variable scale to "logarithmic
-p = ggplot(data = dataInput[`Country/Region` %in% (listOfCountries) & is.na(`Province/State`)], aes(x = xvalue, y=yvalue, colour = zvalue )) + 
-    geom_point()
-if (scale == 'logarithmic') {
-    p = p + scale_y_log10()
-}
-p
-
-
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     
