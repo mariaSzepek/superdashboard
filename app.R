@@ -129,5 +129,5 @@ server <- function(input, output) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 
-#Wiam testing :) 
+#Wiam testing 
 #Taha Testing 
