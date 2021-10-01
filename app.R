@@ -91,8 +91,15 @@ ui <- fluidPage(
             ),
             
             # dont know what it does 
-            textOutput("out")
+            textOutput("out"),
             
+            # Date range input
+            dateRangeInput(inputId = "date", label = "Date range",
+                           start = min(PlotDT$Date),
+                           end   = max(PlotDT$Date)),
+            
+            #Download option input
+            downloadButton(outputId = "download_data", label = "Download"),
             
             
         ),
