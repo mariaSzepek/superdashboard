@@ -15,6 +15,39 @@ library(readr)
 
 
 
+# read indicator tables..
+
+
+c1_flag <- read_csv("https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/master/data/timeseries/c1_flag.csv")
+setDT(c1_flag) # make sure that coronaD is a data table rather than a data frame
+
+
+
+# 
+# library(readxl)
+# xlfile = "OxCGRT_timeseries_all.xlsx"
+# sheets = excel_sheets(xlfile)
+# 
+# C1Flag = read_excel(xlfile, sheet = sheets[6]) # c1_flag
+# setDT( C1Flag )
+
+
+
+
+Dates_C1Flag = colnames(C1Flag[,!1:2])
+
+
+MeltedC1Flag = melt(C1Flag, id.vars = 1:2,
+                    measure.vars = Dates_C1Flag,
+                    variable.name = "Date_C1Flag",
+                    value.name = "C1effective")
+
+
+View (MeltedC1Flag)
+
+
+
+
 # eigener code:
 coronaDT = read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
 setDT(coronaDT) # make sure that coronaD is a data table rather than a data frame
@@ -29,25 +62,26 @@ EU27 = c("Austria", "Belgium", "Bulgaria", "Croatia",
          "Romania", "Slovakia", "Slovenia", "Spain", "Sweden")
 EU27DT = coronaDT[`Country/Region` %in% EU27][is.na(`Province/State`)]
 
-coronaDT = rbind(EU27DT,cbind(data.table(`Country/Region`='EU27'), t(colSums(EU27DT[,!1:4]))),fill=TRUE)
+# coronaDT = rbind(EU27DT,cbind(data.table(`Country/Region`='EU27'), t(colSums(EU27DT[,!1:4]))),fill=TRUE)
 
 
 # MELT DOES: TRANSFORM FROM WIDE INTO A LONG TABLE 
 
-PlotDT = melt(coronaDT, id.vars = 1:4,
-              measure.vars = Dates,
-              variable.name = "Date",
-              value.name = "Dead")
+MeltedCoronaDT = melt(coronaDT, id.vars = 1:4,
+                      measure.vars = Dates,
+                      variable.name = "Date",
+                      value.name = "Dead")
 
+MeltedCoronaDT
 
-
-PlotDT$Date = PlotDT$Date %>%
+MeltedCoronaDT$Date = MeltedCoronaDT$Date %>%
     as.Date(format = "%m/%d/%y")
 
+MeltedCoronaDT
 
 ## steps to a plottable table with death per capita "PlotPerCapita_100k"
 
-PlotDT_OnlyCountries = PlotDT[is.na(`Province/State`)]
+MeltedCoronaDT_OnlyCountries = MeltedCoronaDT[is.na(`Province/State`)]
 
 # total population data: 
 
@@ -56,17 +90,30 @@ setDT(totPopRaw)
 
 totPopClean = totPopRaw[4:269,!2:64]
 
+# rename column ...65:
+setnames(totPopClean, "...65", "Population in 2020")
+totPopClean
+# add EU27 population:
+
+DP_LIVE <- read_csv("DP_LIVE_01102021210956871.csv")
+setDT(DP_LIVE)
+
+Pop_EU27 = (DP_LIVE[ LOCATION == "EU27" & SUBJECT == "TOT" & MEASURE == "MLN_PER" & TIME == 2020, list (LOCATION, Value) ])
+
+setnames( Pop_EU27, "LOCATION", "Data Source")
+setnames( Pop_EU27, "Value", "Population in 2020" )
+
+totPopClean = rbind( totPopClean, Pop_EU27 ) 
+totPopClean[ `Data Source` == "EU27", `Population in 2020` := totPopClean[ `Data Source` == "EU27", `Population in 2020` ] * 1000000 ] 
+
+
 # calculate death per capita (100k inhabitants):
 # inner join:
-PlotPerCapitaDT_100k = merge(PlotDT_OnlyCountries, totPopClean, by.x = 'Country/Region', by.y = 'Data Source', all = FALSE)
+PlotDT = merge(MeltedCoronaDT_OnlyCountries, totPopClean, by.x = 'Country/Region', by.y = 'Data Source', all = FALSE)
 
 # calculation:
-PlotPerCapitaDT_100k$deathPer100k <- (PlotPerCapitaDT_100k$Dead / PlotPerCapitaDT_100k$...65 )* 100000
-
-# rename column ...65:
-setnames(PlotPerCapitaDT_100k, "...65", "Population in 2020")
-
-# [TO DO MARIA] coronaDT = rbind(EU27DT,cbind(data.table(`Country/Region`='EU27'), t(colSums(EU27DT[,!1:4]))),fill=TRUE)
+PlotDT$deathPer100k <- (PlotDT$Dead / PlotDT$`Population in 2020`)* 100000
+View(PlotDT)
 
 # outsource plot function
 
@@ -105,7 +152,7 @@ ui <- fluidPage(
                                'create' = TRUE,
                                'persist' = FALSE,
                                placeholder = 'Select countries'
-                               )
+                           )
             ),
             
             # dont know what it does 
@@ -134,15 +181,15 @@ ui <- fluidPage(
 server <- function(input, output) {
     
     output$plot_absoluteDeaths <- renderPlot({
-
+        
         plotCoronaDeaths ( input$countries, PlotDT ) # input$scale? column nane?
-
+        
     })
     
     output$plot_deathsPer100k <- renderPlot({
-
-        plotCoronaDeaths ( input$countries, PlotPerCapitaDT_100k ) # input$scale?
-
+        
+        plotCoronaDeaths ( input$countries, PlotDT ) # input$scale?
+        
     })
     
     
